@@ -5,8 +5,8 @@ from utils.database import get_database_pool
 import config
 import logging
 import uuid
-import asyncpg # For specific error handling
-import traceback # For hardcore debugging
+import asyncpg 
+import traceback 
 
 logger = logging.getLogger(__name__)
 product_session_cache = {}  # session_id -> (product_name, product_secret)
@@ -166,20 +166,19 @@ class RoleSelectView(disnake.ui.View):
             await interaction.edit_original_message(
                 content=f"Role '{role.name}' was created automatically.",
                 view=None,
-                ephemeral=True
             )
         except disnake.Forbidden:
             logger.error(f"Missing 'Manage Roles' permission in {self.guild.name}")
             await interaction.edit_original_message(
                 content="❌ I don't have permission to create roles.", 
-                view=None,ephemeral=True
+                view=None
             )
             return
         except Exception as e:
             logger.error(f"Failed to create role: {e}")
             await interaction.edit_original_message(
                 content=f"❌ An error occurred while trying to create the role: {e}", 
-                view=None,ephemeral=True
+                view=None
             )
             return
         
@@ -209,7 +208,6 @@ class RoleSelectView(disnake.ui.View):
 
             encrypted_secret = encrypt_data(product_secret)
 
-            # --- THIS IS THE CORRECTED DATABASE CODE ---
             # 1. Await the function to get the pool
             pool = await get_database_pool()
             # 2. Use the pool to acquire a connection
@@ -223,7 +221,6 @@ class RoleSelectView(disnake.ui.View):
                     logger.info(f"[Product Added] '{product_name}' added to '{self.guild.name}' with role '{role.name}'")
                     
                     # We already edited the message, so we must use followup
-                    # --- FIXED: 'transient=True' changed to 'ephemeral=True' ---
                     await interaction.followup.send(
                         f"✅ Product **`{product_name}`** added successfully with role {role.mention}.",
                         ephemeral=True,
@@ -231,7 +228,6 @@ class RoleSelectView(disnake.ui.View):
                     )
                 except asyncpg.exceptions.UniqueViolationError: # Be specific
                     logger.warning(f"[Duplicate Product] Attempt to add duplicate product '{product_name}' in '{self.guild.name}'")
-                    # --- FIXED: 'transient=True' changed to 'ephemeral=True' ---
                     await interaction.followup.send(
                         f"❌ Product **`{product_name}`** already exists.",
                         ephemeral=True,
@@ -245,7 +241,6 @@ class RoleSelectView(disnake.ui.View):
             logger.error(f"--- UNHANDLED ERROR IN FINISH_PRODUCT ---")
             logger.exception(e)
             try:
-                # --- FIXED: 'transient=True' changed to 'ephemeral=True' ---
                 await interaction.followup.send(
                     f"❌ An unknown error occurred. The developers have been notified.\n`Error: {e}`", 
                     ephemeral=True
