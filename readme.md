@@ -117,9 +117,9 @@ KeyVerify uses secure encryption (Fernet) to store license keys. You must genera
 
 ## **Legal for Hosted Bot**
 
-* [Privacy Policy](https://payhip.com/Fayelicious/privacy-policy-discord-bot)  
-* [Terms of Service](https://payhip.com/Fayelicious/discordbot-tos)
+* [Privacy Policy](https://fayelicious.net/legal/privacy-policy/) 
+* [Terms of Service](https://fayelicious.net/legal/terms-of-service/)
 
 **Link to hosted Bot**
 
-* [KeyVerify](https://payhip.com/Fayelicious/payhip-license-verify-bot)
+* [KeyVerify](https://fayelicious.net/projects/keyverify-bot/)
