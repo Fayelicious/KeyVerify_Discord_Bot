@@ -1,10 +1,8 @@
 import disnake
-import requests
-from utils.database import get_database_pool
+import aiohttp
+from utils.database import get_database_pool, save_verified_license
 from utils.validation import validate_license_key
 import config
-from utils.database import save_verified_license
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,6 +13,14 @@ class VerifyLicenseModal(disnake.ui.Modal):
     def __init__(self, product_name, product_secret_key):
         self.product_name = product_name
         self.product_secret_key = product_secret_key
+
+        # --- FIX: Truncate Title for Discord Limit (45 chars) ---
+        # "Verify " takes 7 characters, leaving 38 for the name.
+        display_name = product_name
+        if len(display_name) > 38:
+            # Cut to 35 chars and add "..." to fit safely
+            display_name = display_name[:35] + "..."
+
         components = [
             disnake.ui.TextInput(
                 label="License Key",
@@ -24,7 +30,8 @@ class VerifyLicenseModal(disnake.ui.Modal):
                 max_length=50,
             )
         ]
-        super().__init__(title=f"Verify {product_name}", custom_id="verify_license_modal", components=components)
+        # Use 'display_name' for the UI title, but 'self.product_name' for logic
+        super().__init__(title=f"Verify {display_name}", custom_id="verify_license_modal", components=components)
         
     # Handles what happens after the user submits the modal.
     # It checks the license with Payhip, assigns a role, and logs the action if everything is valid.
@@ -36,44 +43,48 @@ class VerifyLicenseModal(disnake.ui.Modal):
             validate_license_key(license_key)
         except ValueError as e:
             logger.warning(f"[Validation Failed] {interaction.user} provided invalid key in '{interaction.guild.name}': {str(e)}")
-            await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True,delete_after=config.message_timeout)
+            await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True, delete_after=config.message_timeout)
             return
 
         PAYHIP_VERIFY_URL = f"https://payhip.com/api/v2/license/verify?license_key={license_key}"
         PAYHIP_INCREMENT_USAGE_URL = "https://payhip.com/api/v2/license/usage"
 
-        headers = {"product-secret-key": self.product_secret_key}
+        headers = {
+                    "product-secret-key": self.product_secret_key,
+                    "Accept-Encoding": "gzip, deflate"
+                }
 
         try:
             # Verify license key with Payhip
-            response = requests.get(PAYHIP_VERIFY_URL, headers=headers, timeout=10)
-            response.raise_for_status()
-            data = response.json().get("data")
+            # We use aiohttp ClientSession here to prevent blocking the bot
+            async with aiohttp.ClientSession() as session:
+                async with session.get(PAYHIP_VERIFY_URL, headers=headers, timeout=10) as response:
+                    if response.status != 200:
+                        # Emulate raise_for_status() behavior
+                        await interaction.response.send_message("❌ Failed to verify license with server.", ephemeral=True, delete_after=config.message_timeout)
+                        return
+                    
+                    full_response = await response.json()
+                    data = full_response.get("data")
 
-            if not data or not data.get("enabled"):
-                logger.warning(f"[Invalid License] {interaction.user} tried to use a disabled or invalid license in '{interaction.guild.name}'.")
-                await interaction.response.send_message("❌ This license is not valid or has been disabled.", ephemeral=True,delete_after=config.message_timeout)
-                return
+                if not data or not data.get("enabled"):
+                    logger.warning(f"[Invalid License] {interaction.user} tried to use a disabled or invalid license in '{interaction.guild.name}'.")
+                    await interaction.response.send_message("❌ This license is not valid or has been disabled.", ephemeral=True, delete_after=config.message_timeout)
+                    return
 
-            if data.get("uses", 0) > 0:
-                logger.warning(f"[Already Used] {interaction.user} tried a used license ({data['uses']} uses) in '{interaction.guild.name}'.")
-                await interaction.response.send_message(
-                    f"❌ This license has already been used {data['uses']} times.",
-                    ephemeral=True,delete_after=config.message_timeout
-                )
-                return
+                if data.get("uses", 0) > 0:
+                    logger.warning(f"[Already Used] {interaction.user} tried a used license ({data['uses']} uses) in '{interaction.guild.name}'.")
+                    await interaction.response.send_message(
+                        f"❌ This license has already been used {data['uses']} times.",
+                        ephemeral=True, delete_after=config.message_timeout
+                    )
+                    return
 
-            # Mark the license as used in Payhip
-            increment_response = requests.put(
-                PAYHIP_INCREMENT_USAGE_URL,
-                headers=headers,
-                data={"license_key": license_key},
-                timeout=10
-            )
-
-            if increment_response.status_code != 200:
-                await interaction.response.send_message("❌ Failed to mark the license as used.", ephemeral=True,delete_after=config.message_timeout)
-                return
+                # Mark the license as used in Payhip
+                async with session.put(PAYHIP_INCREMENT_USAGE_URL, headers=headers, data={"license_key": license_key}, timeout=10) as increment_response:
+                    if increment_response.status != 200:
+                        await interaction.response.send_message("❌ Failed to mark the license as used.", ephemeral=True, delete_after=config.message_timeout)
+                        return
 
             # Assign role to the user
             user = interaction.author
@@ -87,7 +98,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
                 if not row:
                     await interaction.response.send_message(
                         f"❌ Role information for '{self.product_name}' is missing.",
-                        ephemeral=True,delete_after=config.message_timeout
+                        ephemeral=True, delete_after=config.message_timeout
                     )
                     return
 
@@ -97,7 +108,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
                 if not role:
                     await interaction.response.send_message(
                         "❌ The role associated with this product is missing or deleted.",
-                        ephemeral=True,delete_after=config.message_timeout
+                        ephemeral=True, delete_after=config.message_timeout
                     )
                     return
 
@@ -105,7 +116,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
             logger.info(f"[Role Assigned] Gave role '{role.name}' to {user} in '{guild.name}' for product '{self.product_name}'.")
             await interaction.response.send_message(
                 f"✅🎉 {user.mention}, your license for '{self.product_name}' is verified! Role '{role.name}' has been assigned.",
-                ephemeral=True,delete_after=config.message_timeout
+                ephemeral=True, delete_after=config.message_timeout
             )
             
             await save_verified_license(interaction.author.id, interaction.guild.id, self.product_name, license_key) # Save the license in the local database
@@ -129,11 +140,12 @@ class VerifyLicenseModal(disnake.ui.Modal):
                         embed.set_footer(text="Powered by KeyVerify")
                         embed.timestamp = interaction.created_at
                         await log_channel.send(embed=embed)
-            except Exception as e:               
+            except Exception as e:              
                 print(f"[Log Error] Failed to log license for {user}: {e}") # Fails silently so user still gets a role even if logging fails
 
-        except requests.exceptions.RequestException as e:
+        except aiohttp.ClientError as e:
+            logger.error(f"Payhip API Error: {e}")
             await interaction.response.send_message(
                 "❌ Unable to contact the verification server. Please try again later.",
-                ephemeral=True,delete_after=config.message_timeout
+                ephemeral=True, delete_after=config.message_timeout
             )

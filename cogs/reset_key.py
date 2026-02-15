@@ -1,6 +1,6 @@
 import disnake
 from disnake.ext import commands
-import requests
+import aiohttp
 import os  
 from utils.encryption import decrypt_data
 from utils.database import get_database_pool
@@ -48,32 +48,36 @@ class ResetKey(commands.Cog):
         # Prepare request to Payhip to reset license usage
         PAYHIP_RESET_USAGE_URL = "https://payhip.com/api/v2/license/decrease"
         headers = {
-            "product-secret-key": product_secret_key,
-            "PAYHIP-API-KEY": self.payhip_api_key,  # Add the Payhip API key header
-        }
+                    "product-secret-key": self.product_secret_key,
+                    "Accept-Encoding": "gzip, deflate"
+                }
 
         try:
-            response = requests.put(
-                PAYHIP_RESET_USAGE_URL,
-                headers=headers,
-                data={"license_key": license_key.strip()},
-                timeout=10
-            )
-            if response.status_code == 200:
-                await inter.response.send_message(
-                    f"✅ License key for '{product_name}' has been reset successfully.",
-                    ephemeral=True,delete_after=config.message_timeout
-                )
-            else:
-                response.raise_for_status()
-                await inter.response.send_message(
-                    f"❌ Failed to reset the license key. Status code: {response.status_code}",
-                    ephemeral=True,delete_after=config.message_timeout
-                )
-        except requests.exceptions.RequestException:
+            # Use aiohttp for async request instead of blocking requests
+            async with aiohttp.ClientSession() as session:
+                async with session.put(
+                    PAYHIP_RESET_USAGE_URL,
+                    headers=headers,
+                    data={"license_key": license_key.strip()},
+                    timeout=10
+                ) as response:
+                    
+                    if response.status == 200:
+                        await inter.response.send_message(
+                            f"✅ License key for '{product_name}' has been reset successfully.",
+                            ephemeral=True, delete_after=config.message_timeout
+                        )
+                    else:
+                        # Handle non-200 responses
+                        await inter.response.send_message(
+                            f"❌ Failed to reset the license key. Status code: {response.status}",
+                            ephemeral=True, delete_after=config.message_timeout
+                        )
+
+        except aiohttp.ClientError:
             await inter.response.send_message(
                 "❌ Unable to reset License.",
-                ephemeral=True,delete_after=config.message_timeout
+                ephemeral=True, delete_after=config.message_timeout
             )
             
 # Registers the ResetKey cog with the bot.

@@ -1,9 +1,9 @@
 import disnake
 from disnake.ext import commands
-import requests
+import aiohttp
 from utils.database import get_database_pool
 from utils.encryption import decrypt_data
-import os  # To access environment variables
+import os
 import config
 
 class RemoveUser(commands.Cog):
@@ -57,28 +57,34 @@ class RemoveUser(commands.Cog):
             deactivated_licenses = []
             failed_licenses = []
 
-            for row in rows:
-                product_name = row["product_name"]
-                license_key = decrypt_data(row["license_key"])
-                product_secret = decrypt_data(row["product_secret"])
+            # Open a single async session for all deactivation requests
+            async with aiohttp.ClientSession() as session:
+                for row in rows:
+                    product_name = row["product_name"]
+                    license_key = decrypt_data(row["license_key"])
+                    product_secret = decrypt_data(row["product_secret"])
 
-                try:
-                    PAYHIP_DISABLE_LICENSE_URL = "https://payhip.com/api/v2/license/disable"
-                    headers = {"product-secret-key": product_secret, "payhip-api-key": self.payhip_api_key}
-                    response = requests.put(
-                        PAYHIP_DISABLE_LICENSE_URL,
-                        headers=headers,
-                        data={"license_key": license_key},
-                        timeout=10
-                    )
+                    try:
+                        PAYHIP_DISABLE_LICENSE_URL = "https://payhip.com/api/v2/license/disable"
+                        headers = {
+                                    "product-secret-key": self.product_secret_key,
+                                    "Accept-Encoding": "gzip, deflate"
+                                }
+                        
+                        async with session.put(
+                            PAYHIP_DISABLE_LICENSE_URL,
+                            headers=headers,
+                            data={"license_key": license_key},
+                            timeout=10
+                        ) as response:
 
-                    if response.status_code == 200:
-                        deactivated_licenses.append(product_name)
-                    else:
+                            if response.status == 200:
+                                deactivated_licenses.append(product_name)
+                            else:
+                                failed_licenses.append(product_name)
+
+                    except aiohttp.ClientError:
                         failed_licenses.append(product_name)
-
-                except requests.exceptions.RequestException:
-                    failed_licenses.append(product_name)
 
             # Remove user from the database
             await conn.execute(
