@@ -49,7 +49,7 @@ Recently updated to be **fully asynchronous**, it handles multiple requests effi
 ## **Installation & Setup**
 
 1. **Clone the repo:**  
-   git clone \[https://github.com/Fayelicious/KeyVerify\_Discord\_Bot.git\](https://github.com/Fayelicious/KeyVerify\_Discord\_Bot.git)
+   git clone https://github.com/Fayelicious/KeyVerify/Discord/Bot.git
 
 2. **Install dependencies:**  
    pip install \-r requirements.txt
