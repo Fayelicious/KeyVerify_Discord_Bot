@@ -1,14 +1,10 @@
-<div align="center"\> \<h1\> KeyVerify\</h1\> \<p\>\<strong\>A Secure Discord Bot for License Verification via Payhip\</strong\>\</p\>
+<div align="center"> <h1> KeyVerify</h1> <p><strong>A Secure Discord Bot for License Verification via Payhip</strong></p>
 
-<p\>
-
-<a href="https://www.python.org/downloads/"\>\<img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python Version"\>\</a\>
-
-<a href="\[suspicious link removed\]"\>\<img src="https://img.shields.io/badge/Discord-Bot%20Ready-7289DA?logo=discord" alt="Discord Bot Ready"\>\</a\>
-
-</p\>
-
-</div\>
+<p>
+<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python Version"></a>
+<a href="[suspicious link removed]"><img src="https://img.shields.io/badge/Discord-Bot%20Ready-7289DA?logo=discord" alt="Discord Bot Ready"></a>
+</p>
+</div>
 
 [Invite bot to your Server](https://discord.com/oauth2/authorize?client_id=1314098590951673927&permissions=268511232&integration_type=0&scope=bot+applications.commands)
 
@@ -71,43 +67,43 @@ KeyVerify uses secure encryption (Fernet) to store license keys. You must genera
    WdIf6ZfNNuHrXkVvZBMyPZr7nqSItmGqM9dWBtZsKfs=  
 2. Set it in your .env file (see below).
 
-### **Configuration (.env)**
+  ### **Configuration (.env)**
 
-Create a .env file in the bot root:
+  Create a .env file in the bot root:
 
-DISCORD\_TOKEN=your\_discord\_bot\_token  
-PAYHIP\_API\_KEY=your\_payhip\_api\_key  
-DATABASE\_URL=your\_postgres\_connection\_url  
-LOG\_LEVEL=INFO
+  DISCORD\_TOKEN=your\_discord\_bot\_token  
+  PAYHIP\_API\_KEY=your\_payhip\_api\_key  
+  DATABASE\_URL=your\_postgres\_connection\_url  
+  LOG\_LEVEL=INFO
 
-\# Paste the key you generated above here:  
-ENCRYPTION\_KEYS=YOUR\_GENERATED\_KEY\_HERE
+  \# Paste the key you generated above here:  
+  ENCRYPTION\_KEYS=YOUR\_GENERATED\_KEY\_HERE
 
 3. **Run the bot:**  
    python bot.py
 
-*Make sure your bot has required permissions: Manage Roles, Send Messages, and Read Message History.*
+  *Make sure your bot has required permissions: Manage Roles, Send Messages, and Read Message History.*
 
-## **🔄 Key Rotation (Security)**
+  ## **🔄 Key Rotation (Security)**
 
-If you ever need to change your encryption key (e.g., for security reasons), you can do so without breaking your database.
+  If you ever need to change your encryption key (e.g., for security reasons), you can do so without breaking your database.
 
-1. Generate a **NEW** key using the python command above.  
-2. Add it to the **front** of your .env list, separated by a comma:  
-   ENCRYPTION\_KEYS=NEW\_KEY,OLD\_KEY
+  1. Generate a **NEW** key using the python command above.  
+  2. Add it to the **front** of your .env list, separated by a comma:  
+    ENCRYPTION\_KEYS=NEW\_KEY,OLD\_KEY
 
-3. **Restart the bot.**  
-   * The bot will automatically detect the new key.  
-   * It will scan the database on startup and **re-encrypt** all old data using the new key.  
-4. Once the console says ✅ SECURITY ROTATION: Re-encrypted X records, you can safely remove the OLD\_KEY from your .env file.
+  3. **Restart the bot.**  
+    * The bot will automatically detect the new key.  
+    * It will scan the database on startup and **re-encrypt** all old data using the new key.  
+  4. Once the console says ✅ SECURITY ROTATION: Re-encrypted X records, you can safely remove the OLD\_KEY from your .env file.
 
 ## **Project Status**
 
-KeyVerify is actively in development and used in live communities like Poodle's Discord. Feedback, contributions, and issue reports are always welcome\!
+  KeyVerify is actively in development and used in live communities like Poodle's Discord. Feedback, contributions, and issue reports are always welcome\!
 
 ## **Support & Contact**
 
-For help or to suggest a feature:
+  For help or to suggest a feature:
 
 **Discord:** Fayelicious\_
 
