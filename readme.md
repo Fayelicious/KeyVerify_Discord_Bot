@@ -1,14 +1,14 @@
-\<div align="center"\> \<h1\> KeyVerify\</h1\> \<p\>\<strong\>A Secure Discord Bot for License Verification via Payhip\</strong\>\</p\>
+<div align="center"\> \<h1\> KeyVerify\</h1\> \<p\>\<strong\>A Secure Discord Bot for License Verification via Payhip\</strong\>\</p\>
 
-\<p\>
+<p\>
 
-\<a href="https://www.python.org/downloads/"\>\<img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python Version"\>\</a\>
+<a href="https://www.python.org/downloads/"\>\<img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python Version"\>\</a\>
 
-\<a href="\[suspicious link removed\]"\>\<img src="https://img.shields.io/badge/Discord-Bot%20Ready-7289DA?logo=discord" alt="Discord Bot Ready"\>\</a\>
+<a href="\[suspicious link removed\]"\>\<img src="https://img.shields.io/badge/Discord-Bot%20Ready-7289DA?logo=discord" alt="Discord Bot Ready"\>\</a\>
 
-\</p\>
+</p\>
 
-\</div\>
+</div\>
 
 [Invite bot to your Server](https://discord.com/oauth2/authorize?client_id=1314098590951673927&permissions=268511232&integration_type=0&scope=bot+applications.commands)
 
