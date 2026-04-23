@@ -42,6 +42,57 @@ async def get_verified_license(user_id, guild_id, product_name):
 # Cooldown rate limiter: allows 1 verification request every 20 seconds per user
 verify_cooldown = CooldownMapping.from_cooldown(1, 20, BucketType.user)
 
+class ProductPaginationView(disnake.ui.View):
+    def __init__(self, products: dict):
+        super().__init__(timeout=60)
+        self.products = products
+        self.product_names = list(products.keys())
+        self.page = 0
+        self.page_size = 24  # Leave 1 spot for "Page info" or just safety
+        self.update_items()
+
+    def update_items(self):
+        self.clear_items()
+        
+        # Calculate chunks
+        start = self.page * self.page_size
+        end = start + self.page_size
+        current_chunk = self.product_names[start:end]
+
+        # Create Dropdown
+        options = [
+            disnake.SelectOption(label=name, description=f"Verify {name}")
+            for name in current_chunk
+        ]
+        dropdown = disnake.ui.StringSelect(placeholder=f"Products (Page {self.page + 1})", options=options)
+        dropdown.callback = self.select_callback
+        self.add_item(dropdown)
+
+        # Add Navigation Buttons if total products > 24
+        if len(self.product_names) > self.page_size:
+            prev_btn = disnake.ui.Button(label="⬅️ Previous", disabled=(self.page == 0))
+            prev_btn.callback = self.prev_page
+            
+            next_btn = disnake.ui.Button(label="Next ➡️", disabled=(end >= len(self.product_names)))
+            next_btn.callback = self.next_page
+            
+            self.add_item(prev_btn)
+            self.add_item(next_btn)
+
+    async def select_callback(self, interaction: disnake.MessageInteraction):
+        await handle_product_dropdown(interaction, self.products)
+
+    async def prev_page(self, interaction: disnake.MessageInteraction):
+        self.page -= 1
+        self.update_items()
+        await interaction.response.edit_message(view=self)
+
+    async def next_page(self, interaction: disnake.MessageInteraction):
+        self.page += 1
+        self.update_items()
+        await interaction.response.edit_message(view=self)
+        
+
 # Represents a view containing a verification button.
 # When clicked, it checks cooldowns, checks owned products, assigns roles, and handles verification flows.
 class VerificationButton(disnake.ui.View):
@@ -111,54 +162,4 @@ async def handle_product_dropdown(interaction, products):
     except disnake.NotFound:
         logger.warning(f"[Expired Interaction] User {interaction.user} tried to verify after interaction expired.")
         
-        
-class ProductPaginationView(disnake.ui.View):
-    def __init__(self, products: dict):
-        super().__init__(timeout=60)
-        self.products = products
-        self.product_names = list(products.keys())
-        self.page = 0
-        self.page_size = 24  # Leave 1 spot for "Page info" or just safety
-        self.update_items()
-
-    def update_items(self):
-        self.clear_items()
-        
-        # Calculate chunks
-        start = self.page * self.page_size
-        end = start + self.page_size
-        current_chunk = self.product_names[start:end]
-
-        # Create Dropdown
-        options = [
-            disnake.SelectOption(label=name, description=f"Verify {name}")
-            for name in current_chunk
-        ]
-        dropdown = disnake.ui.StringSelect(placeholder=f"Products (Page {self.page + 1})", options=options)
-        dropdown.callback = self.select_callback
-        self.add_item(dropdown)
-
-        # Add Navigation Buttons if total products > 24
-        if len(self.product_names) > self.page_size:
-            prev_btn = disnake.ui.Button(label="⬅️ Previous", disabled=(self.page == 0))
-            prev_btn.callback = self.prev_page
-            
-            next_btn = disnake.ui.Button(label="Next ➡️", disabled=(end >= len(self.product_names)))
-            next_btn.callback = self.next_page
-            
-            self.add_item(prev_btn)
-            self.add_item(next_btn)
-
-    async def select_callback(self, interaction: disnake.MessageInteraction):
-        await handle_product_dropdown(interaction, self.products)
-
-    async def prev_page(self, interaction: disnake.MessageInteraction):
-        self.page -= 1
-        self.update_items()
-        await interaction.response.edit_message(view=self)
-
-    async def next_page(self, interaction: disnake.MessageInteraction):
-        self.page += 1
-        self.update_items()
-        await interaction.response.edit_message(view=self)
         
