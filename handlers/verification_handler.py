@@ -83,15 +83,14 @@ class ProductPaginationView(disnake.ui.View):
         await handle_product_dropdown(interaction, self.products)
 
     async def prev_page(self, interaction: disnake.MessageInteraction):
-        self.page -= 1
-        self.update_items()
-        await interaction.response.edit_message(view=self)
+            self.page -= 1
+            self.update_items()
+            await interaction.response.edit_message(view=self)
 
     async def next_page(self, interaction: disnake.MessageInteraction):
         self.page += 1
         self.update_items()
         await interaction.response.edit_message(view=self)
-        
 
 # Represents a view containing a verification button.
 # When clicked, it checks cooldowns, checks owned products, assigns roles, and handles verification flows.
