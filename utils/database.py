@@ -1,13 +1,15 @@
 import asyncpg
-from utils.encryption import decrypt_data, encrypt_data,reencrypt_if_needed
+import logging
+from utils.encryption import decrypt_data, encrypt_data, reencrypt_if_needed
 from dotenv import load_dotenv
 import os
 
-load_dotenv() # Load environment variables from .env file
+load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL") # Get the database URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
+database_pool = None
 
-database_pool = None  # Global variable to hold the asyncpg connection pool
+logger = logging.getLogger(__name__)
 
 # Initializes the PostgreSQL database and required tables
 async def initialize_database():
@@ -42,7 +44,7 @@ async def initialize_database():
         )
         """)
         
-    print("Database initialized.")
+    logger.info("Database initialized.")
     
 # Provides access to the shared asyncpg connection pool
 async def get_database_pool():
@@ -90,7 +92,7 @@ async def run_auto_rotation():
     Scans the database and re-encrypts ANY data found using an old key.
     This ensures that immediately after startup, the old key is useless.
     """
-    print("🔄 Checking for data validation and key rotation...")
+    logger.info("Checking for data validation and key rotation...")
     
     pool = await get_database_pool()
     rotated_count = 0
@@ -128,6 +130,6 @@ async def run_auto_rotation():
                 rotated_count += 1
 
     if rotated_count > 0:
-        print(f"✅ SECURITY ROTATION: Re-encrypted {rotated_count} records with the new key.")
+        logger.info(f"SECURITY ROTATION: Re-encrypted {rotated_count} records with the new key.")
     else:
-        print("✅ Database is already fully encrypted with the latest key.")
+        logger.info("Database is already fully encrypted with the latest key.")

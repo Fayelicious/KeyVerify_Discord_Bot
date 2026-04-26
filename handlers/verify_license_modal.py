@@ -38,9 +38,9 @@ class VerifyLicenseModal(disnake.ui.Modal):
     async def callback(self, interaction: disnake.ModalInteraction):
         license_key = interaction.text_values["license_key"].strip()
 
-        # Validate license key format
+        # Validate and normalize license key format
         try:
-            validate_license_key(license_key)
+            license_key = validate_license_key(license_key)
         except ValueError as e:
             logger.warning(f"[Validation Failed] {interaction.user} provided invalid key in '{interaction.guild.name}': {str(e)}")
             await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True, delete_after=config.message_timeout)

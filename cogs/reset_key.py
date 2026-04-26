@@ -1,17 +1,79 @@
 import disnake
 from disnake.ext import commands
 import aiohttp
-import os  
+import os
 from utils.encryption import decrypt_data
 from utils.database import get_database_pool
 import config
+import logging
 
-# This cog allows server owners to reset the usage count of a license key for a Payhip product.
+logger = logging.getLogger(__name__)
+
+
+class ResetKeyModal(disnake.ui.Modal):
+    def __init__(self, product_name: str, product_secret_key: str, payhip_api_key: str):
+        self.product_name = product_name
+        self.product_secret_key = product_secret_key
+        self.payhip_api_key = payhip_api_key
+        display_name = product_name if len(product_name) <= 28 else product_name[:25] + "..."
+        components = [
+            disnake.ui.TextInput(
+                label="License Key",
+                custom_id="license_key",
+                placeholder="Enter the license key to reset",
+                style=disnake.TextInputStyle.short,
+                max_length=50,
+            )
+        ]
+        super().__init__(title=f"Reset License: {display_name}", custom_id="reset_key_modal", components=components)
+
+    async def callback(self, interaction: disnake.ModalInteraction):
+        license_key = interaction.text_values["license_key"].strip()
+
+        PAYHIP_RESET_USAGE_URL = "https://payhip.com/api/v2/license/decrease"
+        headers = {
+            "product-secret-key": self.product_secret_key,
+            "payhip-api-key": self.payhip_api_key,
+            "Accept-Encoding": "gzip, deflate"
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.put(
+                    PAYHIP_RESET_USAGE_URL,
+                    headers=headers,
+                    data={"license_key": license_key},
+                    timeout=10
+                ) as response:
+                    if response.status == 200:
+                        logger.info(f"[Key Reset] License for '{self.product_name}' reset by {interaction.author} in '{interaction.guild.name}'.")
+                        await interaction.response.send_message(
+                            f"✅ License key for '{self.product_name}' has been reset successfully.",
+                            ephemeral=True, delete_after=config.message_timeout
+                        )
+                    else:
+                        body = await response.text()
+                        logger.error(f"[Key Reset Failed] Status {response.status} for '{self.product_name}' by {interaction.author}. Response: {body}")
+                        await interaction.response.send_message(
+                            f"❌ Failed to reset the license key. Status: {response.status}",
+                            ephemeral=True, delete_after=config.message_timeout
+                        )
+
+        except aiohttp.ClientError as e:
+            logger.error(f"[Key Reset Error] Network error for '{self.product_name}' by {interaction.author}: {e}")
+            await interaction.response.send_message(
+                "❌ Unable to reset license. Please try again later.",
+                ephemeral=True, delete_after=config.message_timeout
+            )
+
+
 class ResetKey(commands.Cog):
 
     def __init__(self, bot: commands.InteractionBot):
         self.bot = bot
-        self.payhip_api_key = os.getenv("PAYHIP_API_KEY")  # Load Payhip API key from environment variables
+        self.payhip_api_key = os.getenv("PAYHIP_API_KEY")
+        if not self.payhip_api_key:
+            raise ValueError("PAYHIP_API_KEY is not defined in environment variables.")
 
     @commands.slash_command(
         description="Reset a product license key's usage count (server owner only).",
@@ -21,65 +83,28 @@ class ResetKey(commands.Cog):
         self,
         inter: disnake.ApplicationCommandInteraction,
         product_name: str,
-        license_key: str,
     ):
-        # This slash command resets the usage counter for a license key through Payhip.
         if inter.author.id != inter.guild.owner_id:
             await inter.response.send_message(
                 "❌ Only the server owner can use this command.", ephemeral=True, delete_after=config.message_timeout
             )
             return
-        
-        # Get the encrypted product secret key from the database
+
         async with (await get_database_pool()).acquire() as conn:
             row = await conn.fetchrow(
                 "SELECT product_secret FROM products WHERE guild_id = $1 AND product_name = $2",
                 str(inter.guild.id), product_name
             )
 
-            if not row:
-                await inter.response.send_message(
-                    f"❌ Product '{product_name}' not found.", ephemeral=True, delete_after=config.message_timeout
-                )
-                return
-
-            product_secret_key = decrypt_data(row["product_secret"])
-            
-        # Prepare request to Payhip to reset license usage
-        PAYHIP_RESET_USAGE_URL = "https://payhip.com/api/v2/license/decrease"
-        headers = {
-                    "product-secret-key": self.product_secret_key,
-                    "Accept-Encoding": "gzip, deflate"
-                }
-
-        try:
-            # Use aiohttp for async request instead of blocking requests
-            async with aiohttp.ClientSession() as session:
-                async with session.put(
-                    PAYHIP_RESET_USAGE_URL,
-                    headers=headers,
-                    data={"license_key": license_key.strip()},
-                    timeout=10
-                ) as response:
-                    
-                    if response.status == 200:
-                        await inter.response.send_message(
-                            f"✅ License key for '{product_name}' has been reset successfully.",
-                            ephemeral=True, delete_after=config.message_timeout
-                        )
-                    else:
-                        # Handle non-200 responses
-                        await inter.response.send_message(
-                            f"❌ Failed to reset the license key. Status code: {response.status}",
-                            ephemeral=True, delete_after=config.message_timeout
-                        )
-
-        except aiohttp.ClientError:
+        if not row:
             await inter.response.send_message(
-                "❌ Unable to reset License.",
-                ephemeral=True, delete_after=config.message_timeout
+                f"❌ Product '{product_name}' not found.", ephemeral=True, delete_after=config.message_timeout
             )
-            
-# Registers the ResetKey cog with the bot.
+            return
+
+        product_secret_key = decrypt_data(row["product_secret"])
+        await inter.response.send_modal(ResetKeyModal(product_name, product_secret_key, self.payhip_api_key))
+
+
 def setup(bot: commands.InteractionBot):
     bot.add_cog(ResetKey(bot))
