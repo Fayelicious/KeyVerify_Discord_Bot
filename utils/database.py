@@ -43,6 +43,13 @@ async def initialize_database():
             PRIMARY KEY (user_id, guild_id, product_name)
         )
         """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS blacklisted_guilds (
+            guild_id TEXT PRIMARY KEY,
+            reason   TEXT,
+            added_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        """)
         
     logger.info("Database initialized.")
     

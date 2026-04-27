@@ -80,6 +80,18 @@ async def on_ready():
 
 
 @bot.event
+async def on_guild_join(guild: disnake.Guild):
+    await _db_ready.wait()
+    async with (await get_database_pool()).acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT guild_id FROM blacklisted_guilds WHERE guild_id = $1", str(guild.id)
+        )
+    if row:
+        logger.warning(f"[Blacklist] Joined blacklisted guild '{guild.name}' ({guild.id}). Leaving immediately.")
+        await guild.leave()
+
+
+@bot.event
 async def on_close():
     logger.info("Bot is shutting down...")
     try:
