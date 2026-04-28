@@ -5,7 +5,7 @@ from disnake.ext import commands
 import os
 import logging
 from dotenv import load_dotenv
-from utils.database import initialize_database, get_database_pool, fetch_products, run_auto_rotation
+from utils.database import initialize_database, get_database_pool, run_auto_rotation
 from utils.logging_config import setup_logging
 from handlers.verification_handler import VerificationButton
 import config
@@ -68,10 +68,6 @@ async def on_ready():
             channel = guild.get_channel(int(channel_id))
             if not channel:
                 await conn.execute("DELETE FROM verification_message WHERE guild_id = $1", guild_id)
-                continue
-
-            products = await fetch_products(guild_id)
-            if not products:
                 continue
 
             view = VerificationButton(guild_id)
