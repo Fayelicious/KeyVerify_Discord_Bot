@@ -56,23 +56,10 @@ async def on_ready():
     activity = disnake.Game(name=f"/help | {version}")
     await bot.change_presence(activity=activity)
 
-    async with (await get_database_pool()).acquire() as conn:
-        rows = await conn.fetch("SELECT guild_id, message_id, channel_id FROM verification_message")
-        for row in rows:
-            guild_id, message_id, channel_id = row["guild_id"], row["message_id"], row["channel_id"]
-
-            guild = bot.get_guild(int(guild_id))
-            if not guild:
-                continue
-
-            channel = guild.get_channel(int(channel_id))
-            if not channel:
-                await conn.execute("DELETE FROM verification_message WHERE guild_id = $1", guild_id)
-                continue
-
-            view = VerificationButton(guild_id)
-            bot.add_view(view, message_id=int(message_id))
-            logger.info(f"Verification message loaded for guild {guild_id}.")
+    # One global persistent view handles button clicks from every server's verification message.
+    # No per-message or per-guild registration needed — guild context comes from the interaction.
+    bot.add_view(VerificationButton())
+    logger.info("Persistent verification button view registered.")
 
 
 @bot.event

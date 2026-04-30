@@ -28,7 +28,7 @@ class StartVerification(commands.Cog):
         has_products = bool(products)
 
         embed = create_verification_embed()
-        view = create_verification_view(str(inter.guild.id))
+        view = create_verification_view()
 
         if not has_products:
             embed.description += "\n\n⚠️ *Note: No products are currently configured for this server.*"

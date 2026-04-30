@@ -20,8 +20,8 @@ def create_verification_embed():
     return embed
 
 
-def create_verification_view(guild_id):
-    return VerificationButton(guild_id)
+def create_verification_view():
+    return VerificationButton()
 
 
 # Cooldown rate limiter: allows 1 verification request every 20 seconds per user
@@ -77,14 +77,15 @@ class ProductPaginationView(disnake.ui.View):
 
 
 class VerificationButton(disnake.ui.View):
-    def __init__(self, guild_id):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.guild_id = guild_id
         button = disnake.ui.Button(label="Verify", style=disnake.ButtonStyle.primary, custom_id="verify_button")
         button.callback = self.on_button_click
         self.add_item(button)
 
     async def on_button_click(self, interaction: disnake.MessageInteraction):
+        guild_id = str(interaction.guild_id)
+
         # Cooldown check
         current = time.time()
         bucket = verify_cooldown.get_bucket(interaction)
@@ -99,16 +100,15 @@ class VerificationButton(disnake.ui.View):
 
         await interaction.response.defer(ephemeral=True)
 
-        products = await fetch_products(self.guild_id)
+        products = await fetch_products(guild_id)
         if not products:
             await interaction.followup.send("❌ No products available.", ephemeral=True)
             return
 
-        # Batch-fetch all role IDs for this guild's products in one query
         async with (await get_database_pool()).acquire() as conn:
             role_rows = await conn.fetch(
                 "SELECT product_name, role_id FROM products WHERE guild_id = $1",
-                str(self.guild_id)
+                guild_id
             )
         role_map = {row["product_name"]: row["role_id"] for row in role_rows}
 
@@ -116,7 +116,7 @@ class VerificationButton(disnake.ui.View):
         unowned_products = {}
 
         for name, secret in products.items():
-            if await get_verified_license(interaction.author.id, self.guild_id, name):
+            if await get_verified_license(interaction.author.id, guild_id, name):
                 role_id = role_map.get(name)
                 if role_id:
                     role = disnake.utils.get(interaction.guild.roles, id=int(role_id))

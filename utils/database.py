@@ -40,8 +40,12 @@ async def initialize_database():
             guild_id TEXT NOT NULL,
             product_name TEXT NOT NULL,
             license_key TEXT NOT NULL,
+            verified_at TIMESTAMPTZ DEFAULT NOW(),
             PRIMARY KEY (user_id, guild_id, product_name)
         )
+        """)
+        await conn.execute("""
+        ALTER TABLE verified_licenses ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ DEFAULT NOW()
         """)
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS blacklisted_guilds (
