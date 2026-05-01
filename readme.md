@@ -1,125 +1,123 @@
-<div align="center"> <h1> KeyVerify</h1> <p><strong>A Secure Discord Bot for License Verification via Payhip</strong></p>
+# KeyVerify
 
-<p>
-<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python Version"></a>
-<a href="[suspicious link removed]"><img src="https://img.shields.io/badge/Discord-Bot%20Ready-7289DA?logo=discord" alt="Discord Bot Ready"></a>
-</p>
-</div>
+**A Discord bot for automated license verification of Payhip digital products.**
 
-[Invite bot to your Server](https://discord.com/oauth2/authorize?client_id=1314098590951673927&permissions=268511232&integration_type=0&scope=bot+applications.commands)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Discord](https://img.shields.io/badge/Discord-Bot%20Ready-7289DA?logo=discord)](https://discord.com/oauth2/authorize?client_id=1314098590951673927&permissions=268511232&integration_type=0&scope=bot+applications.commands)
 
-## **What is KeyVerify?**
+[Invite to your server](https://discord.com/oauth2/authorize?client_id=1314098590951673927&permissions=268511232&integration_type=0&scope=bot+applications.commands) — [Project page](https://fayelicious.net/projects/keyverify-bot/)
 
-**KeyVerify** is a lightweight and secure Discord bot for automating license verification of Payhip digital products. It helps creators manage customer access to Discord roles in a streamlined and encrypted way.
+---
 
-Recently updated to be **fully asynchronous**, it handles multiple requests efficiently without slowing down.
+## Overview
 
-## **Features**
+KeyVerify lets Payhip sellers gate Discord roles behind license key verification. When a user verifies, the bot checks the key against the Payhip API, assigns the configured role, and stores the result encrypted. Roles are automatically reapplied if a verified user rejoins.
 
-* **License Verification** – Secure and user-friendly verification via in-server modal.  
-* **Auto Role Reassignment** – Automatically reapply roles if a verified user rejoins.  
-* **Product Management** – Add, list, or remove products with optional auto-generated roles.  
-* **License Reset** – Reset usage count of a license for reactivations.  
-* **Key Rotation** – **New\!** Safely rotate encryption keys without losing data access.  
-* **Async Core** – **New\!** Built on aiohttp to prevent bot lag during API calls.  
-* **Audit Logging** – Track all verification attempts and role assignments.  
-* **Spam Protection** – Rate-limiting built-in to avoid abuse.  
-* **Encrypted Storage** – License keys and product secrets are safely encrypted using AES (Fernet).
+---
 
-## **Slash Command Overview**
+## Features
+
+- In-server verification via modal — no DMs or external links required
+- Automatic role assignment and reassignment on rejoin
+- Per-product configuration with optional auto-created roles
+- License reset support for reactivations
+- AES encryption (Fernet) for all stored keys and secrets
+- Key rotation: swap encryption keys without data loss
+- Verification logging per server
+- Rate limiting to prevent abuse
+- Persistent verification buttons — survive bot restarts
+
+---
+
+## Commands
 
 | Command | Description |
-| :---- | :---- |
-| /start\_verification | Deploys the verification interface to a channel. |
-| /add\_product | Add a new product with a secret and optional role. |
-| /remove\_product | Remove a product from the server list. |
-| /list\_products | View all products and their associated roles. |
-| /reset\_key | Reset usage for a license key on Payhip. |
-| /set\_lchannel | Define the channel for verification logs. |
-| /remove\_user | Revoke a user's access, delete DB entries, and disable licenses. |
-| /help | Shows help message and support info. |
+|---|---|
+| `/start_verification` | Post the verification button to a channel. |
+| `/add_product` | Register a product with its Payhip secret and an optional role. |
+| `/remove_product` | Remove a product from the server. |
+| `/list_products` | List all registered products and their roles. |
+| `/reset_key` | Reset the usage count of a license key on Payhip. |
+| `/set_lchannel` | Set the channel where verification events are logged. |
+| `/remove_user` | Revoke a user's access and remove their verification records. |
+| `/help` | Show available commands and support information. |
 
-## **Security Practices**
+All commands require server administrator permissions.
 
-* License keys and secrets are **AES-encrypted** (Fernet) before storage.  
-* All commands are **permission-locked** to server owners or admins.  
-* **Cooldown** logic prevents excessive or abusive interactions.  
-* Optional logging ensures traceability in any server.
+---
 
-## **Installation & Setup**
+## Setup
 
-1. **Clone the repo:**  
-   git clone https://github.com/Fayelicious/KeyVerify/Discord/Bot.git
+**1. Clone the repository**
 
-2. **Install dependencies:**  
-   pip install \-r requirements.txt
+```
+git clone https://github.com/Fayelicious/KeyVerify.git
+cd KeyVerify
+```
 
-### **Generating the Encryption Key**
+**2. Install dependencies**
 
-KeyVerify uses secure encryption (Fernet) to store license keys. You must generate a secure key before running the bot.
+```
+pip install -r requirements.txt
+```
 
-**Step-by-step (Beginner Friendly)**
+**3. Generate an encryption key**
 
-1. Generate a secure key. Run this command in your terminal:  
-   python \-c "from cryptography.fernet import Fernet; print(Fernet.generate\_key().decode())"
+```
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
 
-   This will output a secure key like:  
-   WdIf6ZfNNuHrXkVvZBMyPZr7nqSItmGqM9dWBtZsKfs=  
-2. Set it in your .env file (see below).
+Copy the output — you'll need it in the next step.
 
-  ### **Configuration (.env)**
+**4. Create a `.env` file**
 
-  Create a .env file in the bot root:
+```
+DISCORD_TOKEN=your_discord_bot_token
+PAYHIP_API_KEY=your_payhip_api_key
+DATABASE_URL=your_postgres_connection_url
+ENCRYPTION_KEYS=your_generated_key
+LOG_LEVEL=INFO
+```
 
-  DISCORD\_TOKEN=your\_discord\_bot\_token  
-  PAYHIP\_API\_KEY=your\_payhip\_api\_key  
-  DATABASE\_URL=your\_postgres\_connection\_url  
-  LOG\_LEVEL=INFO
+**5. Run the bot**
 
-  \# Paste the key you generated above here:  
-  ENCRYPTION\_KEYS=YOUR\_GENERATED\_KEY\_HERE
+```
+python bot.py
+```
 
-3. **Run the bot:**  
-   python bot.py
+The bot requires the following Discord permissions: Manage Roles, Send Messages, Read Message History.
 
-  *Make sure your bot has required permissions: Manage Roles, Send Messages, and Read Message History.*
+---
 
-  ## **🔄 Key Rotation (Security)**
+## Key Rotation
 
-  If you ever need to change your encryption key (e.g., for security reasons), you can do so without breaking your database.
+To replace your encryption key without losing access to stored data:
 
-  1. Generate a **NEW** key using the python command above.  
-  2. Add it to the **front** of your .env list, separated by a comma:  
-    ENCRYPTION\_KEYS=NEW\_KEY,OLD\_KEY
+1. Generate a new key using the command in step 3 above.
+2. Prepend it to `ENCRYPTION_KEYS`, separated by a comma:
+   ```
+   ENCRYPTION_KEYS=NEW_KEY,OLD_KEY
+   ```
+3. Restart the bot. On startup it will re-encrypt all records using the new key.
+4. Once the log confirms rotation is complete, remove the old key from `.env`.
 
-  3. **Restart the bot.**  
-    * The bot will automatically detect the new key.  
-    * It will scan the database on startup and **re-encrypt** all old data using the new key.  
-  4. Once the console says ✅ SECURITY ROTATION: Re-encrypted X records, you can safely remove the OLD\_KEY from your .env file.
+---
 
-## **Project Status**
+## Built With
 
-  KeyVerify is actively in development and used in live communities like Poodle's Discord. Feedback, contributions, and issue reports are always welcome\!
+- [disnake](https://github.com/DisnakeDev/disnake)
+- [asyncpg](https://github.com/MagicStack/asyncpg)
+- [aiohttp](https://github.com/aio-libs/aiohttp)
+- [cryptography](https://github.com/pyca/cryptography)
+- Python 3.11+
 
-## **Support & Contact**
+---
 
-  For help or to suggest a feature:
+## Legal
 
-**Discord:** Fayelicious\_
+- [Privacy Policy](https://fayelicious.net/legal/privacy-policy/)
+- [Terms of Service](https://fayelicious.net/legal/terms-of-service/)
 
-**Built With:**
+## Contact
 
-* disnake  
-* aiohttp  
-* asyncpg  
-* cryptography  
-* Python 3.11+
-
-## **Legal for Hosted Bot**
-
-* [Privacy Policy](https://fayelicious.net/legal/privacy-policy/) 
-* [Terms of Service](https://fayelicious.net/legal/terms-of-service/)
-
-**Link to hosted Bot**
-
-* [KeyVerify](https://fayelicious.net/projects/keyverify-bot/)
+Discord: `Fayelicious_`
