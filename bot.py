@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from utils.database import initialize_database, get_database_pool, run_auto_rotation
 from utils.logging_config import setup_logging
 from handlers.verification_handler import VerificationButton
+from bot_api import start_bot_api
 import config
 
 load_dotenv()
@@ -45,6 +46,7 @@ async def on_connect():
     logger.info("Connected to Discord. Initializing database...")
     await initialize_database()
     await run_auto_rotation()
+    await start_bot_api(bot)
     _db_ready.set()
 
 
