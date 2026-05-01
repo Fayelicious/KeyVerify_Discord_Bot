@@ -110,7 +110,13 @@ def create_bot_api(bot):
     return app
 
 
+_started = False
+
 async def start_bot_api(bot):
+    global _started
+    if _started:
+        return
+    _started = True
     app = create_bot_api(bot)
     runner = web.AppRunner(app)
     await runner.setup()
