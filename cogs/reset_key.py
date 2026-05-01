@@ -4,6 +4,7 @@ import aiohttp
 import os
 from utils.encryption import decrypt_data
 from utils.database import get_database_pool
+from utils.validation import validate_license_key
 import config
 import logging
 
@@ -20,7 +21,7 @@ class ResetKeyModal(disnake.ui.Modal):
             disnake.ui.TextInput(
                 label="License Key",
                 custom_id="license_key",
-                placeholder="Enter the license key to reset",
+                placeholder="e.g. 00000-00000-00000-00000",
                 style=disnake.TextInputStyle.short,
                 max_length=50,
             )
@@ -29,6 +30,12 @@ class ResetKeyModal(disnake.ui.Modal):
 
     async def callback(self, interaction: disnake.ModalInteraction):
         license_key = interaction.text_values["license_key"].strip()
+
+        try:
+            license_key = validate_license_key(license_key)
+        except ValueError as e:
+            await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True, delete_after=config.message_timeout)
+            return
 
         PAYHIP_RESET_USAGE_URL = "https://payhip.com/api/v2/license/decrease"
         headers = {

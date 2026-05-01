@@ -25,7 +25,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
             disnake.ui.TextInput(
                 label="License Key",
                 custom_id="license_key",
-                placeholder="Enter your license key",
+                placeholder="e.g. 00000-00000-00000-00000",
                 style=disnake.TextInputStyle.short,
                 max_length=50,
             )
