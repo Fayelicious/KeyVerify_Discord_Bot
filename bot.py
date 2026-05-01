@@ -5,7 +5,7 @@ from disnake.ext import commands
 import os
 import logging
 from dotenv import load_dotenv
-from utils.database import initialize_database, get_database_pool, run_auto_rotation
+from utils.database import initialize_database, get_database_pool, run_auto_rotation, get_setting
 from utils.logging_config import setup_logging
 from handlers.verification_handler import VerificationButton
 from bot_api import start_bot_api
@@ -54,9 +54,8 @@ async def on_connect():
 async def on_ready():
     await _db_ready.wait()
     logger.info(f"Bot is online as {bot.user}!")
-    version = config.version
-    activity = disnake.Game(name=f"/help | {version}")
-    await bot.change_presence(activity=activity)
+    status = await get_setting("status", f"/help | {config.version}")
+    await bot.change_presence(activity=disnake.Game(name=status))
 
     # One global persistent view handles button clicks from every server's verification message.
     # No per-message or per-guild registration needed — guild context comes from the interaction.

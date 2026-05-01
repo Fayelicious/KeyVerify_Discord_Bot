@@ -54,8 +54,28 @@ async def initialize_database():
             added_at TIMESTAMPTZ DEFAULT NOW()
         )
         """)
-        
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS bot_settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """)
+
     logger.info("Database initialized.")
+
+
+async def get_setting(key: str, default: str = "") -> str:
+    async with (await get_database_pool()).acquire() as conn:
+        row = await conn.fetchrow("SELECT value FROM bot_settings WHERE key = $1", key)
+    return row["value"] if row else default
+
+
+async def set_setting(key: str, value: str):
+    async with (await get_database_pool()).acquire() as conn:
+        await conn.execute("""
+            INSERT INTO bot_settings (key, value) VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET value = $2
+        """, key, value)
     
 # Provides access to the shared asyncpg connection pool
 async def get_database_pool():

@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 import disnake
 from aiohttp import web
@@ -72,29 +71,27 @@ def create_bot_api(bot):
             logger.error(f"[BotAPI] Unload failed for {name}: {e}")
             return web.json_response({"error": str(e)}, status=400)
 
-    _config_path = os.path.join(os.path.dirname(__file__), "config.py")
-
     async def get_bot_config(request):
         _auth(request)
+        from utils.database import get_setting
         import config
-        activity = bot.activity.name if bot.activity else ""
-        return web.json_response({"version": config.version, "status": activity})
+        version = await get_setting("version", config.version)
+        status = await get_setting("status", f"/help | {config.version}")
+        return web.json_response({"version": version, "status": status})
 
     async def set_bot_config(request):
         _auth(request)
+        from utils.database import set_setting
         data = await request.json()
         version = data.get("version", "").strip()
         status = data.get("status", "").strip()
 
         if version:
-            content = open(_config_path).read()
-            content = re.sub(r'version\s*=\s*"[^"]*"', f'version = "{version}"', content)
-            open(_config_path, "w").write(content)
-            import importlib, config
-            importlib.reload(config)
+            await set_setting("version", version)
             logger.info(f"[BotAPI] Version updated to {version}")
 
         if status:
+            await set_setting("status", status)
             await bot.change_presence(activity=disnake.Game(name=status))
             logger.info(f"[BotAPI] Status updated to: {status}")
 
