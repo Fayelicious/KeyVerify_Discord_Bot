@@ -46,6 +46,16 @@ class SetLogChannel(commands.Cog):
                 str(inter.guild.id), str(channel.id)
             )
 
+        perms = channel.permissions_for(inter.guild.me)
+        if not perms.send_messages or not perms.view_channel:
+            await inter.response.send_message(
+                f"⚠️ Log channel set to {channel.mention}, but the bot is missing permissions to post there. "
+                f"Please give the bot **View Channel** and **Send Messages** access in that channel.",
+                ephemeral=True,
+                delete_after=config.message_timeout
+            )
+            return
+
         await inter.response.send_message(
             f"✅ Verification log channel set to {channel.mention}.",
             ephemeral=True,
