@@ -41,6 +41,7 @@ class HelpCommand(commands.Cog):
             name="🎁 Product Management",
             value=(
                 "/add_product — Add a product with role assignment\n"
+                "/edit_product — Rename a product or change its assigned role\n"
                 "/list_products — View all added products\n"
                 "/remove_product — Delete a product from the server"
             ),
@@ -49,9 +50,10 @@ class HelpCommand(commands.Cog):
 
         embed.add_field(
             name="🔁 License Actions",
-            value=("/reset_key — Reset usage for a license key (Payhip API required)"
-                   "/remove_user — Blacklists a User and deactivates all used licenses + removes all database entries of user."
-                   ),
+            value=(
+                "/reset_key — Reset usage for a license key\n"
+                "/remove_user — Revoke a user's access and remove all their verification records"
+            ),
             inline=False
         )
 

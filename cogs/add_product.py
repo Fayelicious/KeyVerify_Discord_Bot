@@ -44,7 +44,7 @@ class AddProductModal(disnake.ui.Modal):
             disnake.ui.TextInput(
                 label="Product Secret",
                 custom_id="product_secret",
-                placeholder="Enter the Payhip product secret",
+                placeholder="Payhip dashboard → Products → Edit → Product Secret",
                 style=disnake.TextInputStyle.short,
                 max_length=100,
             )
@@ -205,6 +205,16 @@ class RoleSelectView(disnake.ui.View):
             if not role:
                 await interaction.edit_original_message(content="❌ An unknown error occurred: Role was not found.", view=None)
                 return
+
+            bot_top_role = self.guild.me.top_role
+            if role >= bot_top_role:
+                await interaction.followup.send(
+                    f"⚠️ Product saved, but the bot's role is below **{role.name}** in the server hierarchy. "
+                    f"Move **{bot_top_role.name}** above **{role.name}** in Server Settings → Roles, "
+                    f"otherwise the bot won't be able to assign this role.",
+                    ephemeral=True,
+                    delete_after=30
+                )
 
             encrypted_secret = encrypt_data(product_secret)
 

@@ -29,9 +29,7 @@ class StartVerification(commands.Cog):
 
         embed = create_verification_embed()
         view = create_verification_view()
-
-        if not has_products:
-            embed.description += "\n\n⚠️ *Note: No products are currently configured for this server.*"
+        no_products_note = "\n\n⚠️ You have no products configured yet. Run `/add_product` before users try to verify." if not has_products else ""
 
         async with (await get_database_pool()).acquire() as conn:
             result = await conn.fetchrow(
@@ -48,7 +46,7 @@ class StartVerification(commands.Cog):
                     existing_message = await channel.fetch_message(int(result["message_id"]))
                     await existing_message.edit(embed=embed, view=view)
                     await inter.response.send_message(
-                        "✅ Verification message updated successfully.",
+                        f"✅ Verification message updated successfully.{no_products_note}",
                         ephemeral=True,
                         delete_after=config.message_timeout
                     )
@@ -73,7 +71,7 @@ class StartVerification(commands.Cog):
                         str(inter.guild.id), str(new_message.id), str(inter.channel.id)
                     )
                     await inter.response.send_message(
-                        "✅ New verification message created successfully.",
+                        f"✅ New verification message created successfully.{no_products_note}",
                         ephemeral=True,
                         delete_after=config.message_timeout
                     )
@@ -98,7 +96,7 @@ class StartVerification(commands.Cog):
                     str(inter.guild.id), str(new_message.id), str(inter.channel.id)
                 )
                 await inter.response.send_message(
-                    "✅ Verification message created successfully.",
+                    f"✅ Verification message created successfully.{no_products_note}",
                     ephemeral=True,
                     delete_after=config.message_timeout
                 )

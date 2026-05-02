@@ -38,7 +38,7 @@ class ListProducts(commands.Cog):
         product_entries = []
         for row in rows:
             role = inter.guild.get_role(int(row["role_id"]))
-            role_display = role.mention if role else "*⚠️ Missing Role*"
+            role_display = role.mention if role else "*⚠️ Role deleted — use `/edit_product` to reassign*"
             product_entries.append(f"• **{row['product_name']}** → {role_display}")
 
         # The Paginated View for Listing

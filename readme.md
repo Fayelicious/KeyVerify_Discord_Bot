@@ -35,6 +35,7 @@ KeyVerify lets Payhip sellers gate Discord roles behind license key verification
 |---|---|
 | `/start_verification` | Post the verification button to a channel. |
 | `/add_product` | Register a product with its Payhip secret and an optional role. |
+| `/edit_product` | Rename a product or change its assigned role. |
 | `/remove_product` | Remove a product from the server. |
 | `/list_products` | List all registered products and their roles. |
 | `/reset_key` | Reset the usage count of a license key on Payhip. |

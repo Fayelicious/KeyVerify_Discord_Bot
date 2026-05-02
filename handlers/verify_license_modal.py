@@ -77,7 +77,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
 
                 if data.get("uses", 0) > 0:
                     logger.warning(f"[Already Used] {interaction.user} tried a used license ({data['uses']} uses) in '{interaction.guild.name}'.")
-                    await reply(f"❌ This license has already been used {data['uses']} times.")
+                    await reply(f"❌ This license has already been used. Ask the server owner to reset it.")
                     return
 
                 async with session.put(PAYHIP_INCREMENT_USAGE_URL, headers=headers, data={"license_key": license_key}, timeout=10) as increment_response:

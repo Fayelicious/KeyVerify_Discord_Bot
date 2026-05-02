@@ -102,7 +102,7 @@ class VerificationButton(disnake.ui.View):
 
         products = await fetch_products(guild_id)
         if not products:
-            await interaction.followup.send("❌ No products available.", ephemeral=True)
+            await interaction.followup.send("❌ No products have been set up for this server yet. Contact the server owner.", ephemeral=True)
             return
 
         async with (await get_database_pool()).acquire() as conn:
