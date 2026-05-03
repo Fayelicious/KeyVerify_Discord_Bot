@@ -11,7 +11,7 @@
 
 ## Overview
 
-KeyVerify lets Payhip sellers gate Discord roles behind license key verification. When a user verifies, the bot checks the key against the Payhip API, assigns the configured role, and stores the result encrypted. Roles are automatically reapplied if a verified user rejoins.
+KeyVerify lets Payhip sellers gate Discord roles behind license key verification. When a user verifies, the bot checks the key against the Payhip API and assigns the configured role. The verification result is recorded so roles can be automatically reapplied if a verified user rejoins. License keys are never stored.
 
 ---
 
@@ -21,7 +21,8 @@ KeyVerify lets Payhip sellers gate Discord roles behind license key verification
 - Automatic role assignment and reassignment on rejoin
 - Per-product configuration with optional auto-created roles
 - License reset support for reactivations
-- AES encryption (Fernet) for all stored keys and secrets
+- AES encryption (Fernet) for stored product secrets
+- License keys are never stored — only the fact that verification occurred
 - Key rotation: swap encryption keys without data loss
 - Verification logging per server
 - Rate limiting to prevent abuse
@@ -40,7 +41,7 @@ KeyVerify lets Payhip sellers gate Discord roles behind license key verification
 | `/list_products` | List all registered products and their roles. |
 | `/reset_key` | Reset the usage count of a license key on Payhip. |
 | `/set_lchannel` | Set the channel where verification events are logged. |
-| `/remove_user` | Revoke a user's access and remove their verification records. |
+| `/remove_user` | Revoke a user's access and remove their verification records. License disabling on Payhip must be done manually from your Payhip dashboard. |
 | `/help` | Show available commands and support information. |
 
 All commands require server administrator permissions.

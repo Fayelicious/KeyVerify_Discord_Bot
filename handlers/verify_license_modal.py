@@ -108,7 +108,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
             logger.info(f"[Role Assigned] Gave role '{role.name}' to {user} in '{guild.name}' for product '{self.product_name}'.")
             await reply(f"✅🎉 {user.mention}, your license for '{self.product_name}' is verified! Role '{role.name}' has been assigned.")
 
-            await save_verified_license(interaction.author.id, interaction.guild.id, self.product_name, license_key)
+            await save_verified_license(interaction.author.id, interaction.guild.id, self.product_name)
 
             try:
                 async with (await get_database_pool()).acquire() as conn:
