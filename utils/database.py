@@ -60,6 +60,9 @@ async def initialize_database():
             value TEXT NOT NULL
         )
         """)
+        await conn.execute("""
+        ALTER TABLE server_log_channels ADD COLUMN IF NOT EXISTS permission_warned BOOLEAN DEFAULT FALSE
+        """)
 
     logger.info("Database initialized.")
 
