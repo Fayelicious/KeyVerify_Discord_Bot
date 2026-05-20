@@ -24,7 +24,7 @@ class AddProduct(commands.Cog):
             logger.warning(f"[Unauthorized Attempt] {inter.author} tried to add a product in '{inter.guild.name}'")
             await inter.response.send_message(
                 "❌ Only the server owner can use this command.",
-                transient=True,
+                ephemeral=True,
                 delete_after=config.message_timeout
             )
             return

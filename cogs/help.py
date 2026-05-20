@@ -13,8 +13,8 @@ class HelpCommand(commands.Cog):
         default_member_permissions=disnake.Permissions(manage_guild=True),
     )
     async def help(self, inter: disnake.ApplicationCommandInteraction):
-        # Restrict usage to the server owner
-        if inter.author.id != inter.guild.owner_id:
+        # In a server, restrict to the owner only
+        if inter.guild and inter.author.id != inter.guild.owner_id:
             await inter.response.send_message(
                 "❌ Only the server owner can use this command.",
                 ephemeral=True,
