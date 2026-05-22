@@ -7,6 +7,7 @@ import logging
 from dotenv import load_dotenv
 from utils.database import initialize_database, get_database_pool, run_auto_rotation, get_setting
 from utils.logging_config import setup_logging
+from utils.errors import ConfigurationError, DatabaseError
 from handlers.verification_handler import VerificationButton
 from bot_api import start_bot_api
 import config
@@ -38,14 +39,24 @@ _db_ready = asyncio.Event()
 COG_DIR = "cogs"
 for filename in os.listdir(COG_DIR):
     if filename.endswith(".py") and not filename.startswith("__"):
-        bot.load_extension(f"{COG_DIR}.{filename[:-3]}")
+        cog_path = f"{COG_DIR}.{filename[:-3]}"
+        try:
+            bot.load_extension(cog_path)
+        except Exception as e:
+            # Log and continue — one bad cog should not prevent the bot from starting.
+            logger.error(f"Failed to load cog '{cog_path}': {e}", exc_info=True)
 
 
 @bot.event
 async def on_connect():
     logger.info("Connected to Discord. Initializing database...")
-    await initialize_database()
-    await run_auto_rotation()
+    try:
+        await initialize_database()
+        await run_auto_rotation()
+    except (ConfigurationError, DatabaseError) as e:
+        logger.critical(f"Startup failed — aborting: {e}", exc_info=True)
+        await bot.close()
+        return
     await start_bot_api(bot)
     _db_ready.set()
 

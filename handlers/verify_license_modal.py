@@ -1,11 +1,14 @@
+import asyncio
 import disnake
 import aiohttp
 from utils.database import get_database_pool, save_verified_license
 from utils.validation import validate_license_key
+from utils.errors import ValidationError, DatabaseError
 import config
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 # This modal is shown to users when they select a product to verify.
 # It prompts them to enter a license key, validates it via Payhip, and assigns the appropriate role if valid.
@@ -41,7 +44,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
         # Validate before deferring — no network call needed, so it's within the 3s window.
         try:
             license_key = validate_license_key(license_key)
-        except ValueError as e:
+        except ValidationError as e:
             logger.warning(f"[Validation Failed] {interaction.user} provided invalid key in '{interaction.guild.name}': {str(e)}")
             await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True, delete_after=config.message_timeout)
             return
@@ -64,10 +67,18 @@ class VerifyLicenseModal(disnake.ui.Modal):
             async with aiohttp.ClientSession() as session:
                 async with session.get(PAYHIP_VERIFY_URL, headers=headers, timeout=10) as response:
                     if response.status != 200:
+                        body = await response.text()
+                        logger.error(f"[Payhip Verify] Non-200 response ({response.status}) for '{self.product_name}': {body}")
                         await reply("❌ Failed to verify license with server.")
                         return
 
-                    full_response = await response.json()
+                    try:
+                        full_response = await response.json()
+                    except Exception as e:
+                        logger.error(f"[Payhip Verify] Could not parse JSON response for '{self.product_name}': {e}")
+                        await reply("❌ Unexpected response from verification server.")
+                        return
+
                     data = full_response.get("data")
 
                 if not data or not data.get("enabled"):
@@ -82,6 +93,8 @@ class VerifyLicenseModal(disnake.ui.Modal):
 
                 async with session.put(PAYHIP_INCREMENT_USAGE_URL, headers=headers, data={"license_key": license_key}, timeout=10) as increment_response:
                     if increment_response.status != 200:
+                        body = await increment_response.text()
+                        logger.error(f"[Payhip Increment] Non-200 response ({increment_response.status}) for '{self.product_name}' by {interaction.user}: {body}")
                         await reply("❌ Failed to mark the license as used.")
                         return
 
@@ -108,7 +121,11 @@ class VerifyLicenseModal(disnake.ui.Modal):
             logger.info(f"[Role Assigned] Gave role '{role.name}' to {user} in '{guild.name}' for product '{self.product_name}'.")
             await reply(f"✅🎉 {user.mention}, your license for '{self.product_name}' is verified! Role '{role.name}' has been assigned.")
 
-            await save_verified_license(interaction.author.id, interaction.guild.id, self.product_name)
+            try:
+                await save_verified_license(interaction.author.id, interaction.guild.id, self.product_name)
+            except DatabaseError as e:
+                # Role already assigned — don't surface this to the user, just log it.
+                logger.error(f"[DB Error] Could not record verification for {user} in '{guild.name}': {e}")
 
             try:
                 async with (await get_database_pool()).acquire() as conn:
@@ -132,6 +149,9 @@ class VerifyLicenseModal(disnake.ui.Modal):
             except Exception as e:
                 logger.warning(f"[Log Error] Failed to log license for {user}: {e}")
 
+        except asyncio.TimeoutError:
+            logger.error(f"[Payhip Timeout] Request timed out verifying '{self.product_name}' for {interaction.user}")
+            await reply("❌ Verification timed out. Please try again later.")
         except aiohttp.ClientError as e:
-            logger.error(f"Payhip API Error: {e}")
+            logger.error(f"[Payhip Error] Network error verifying '{self.product_name}' for {interaction.user}: {e}")
             await reply("❌ Unable to contact the verification server. Please try again later.")

@@ -1,3 +1,4 @@
+import asyncpg
 import disnake
 from disnake.ext import commands
 from utils.database import get_database_pool
@@ -124,11 +125,19 @@ class EditOptionsView(disnake.ui.View):
         await interaction.response.send_modal(RenameProductModal(self.guild, self.product_name))
 
     async def _save_role(self, interaction: disnake.MessageInteraction, role: disnake.Role):
-        async with (await get_database_pool()).acquire() as conn:
-            await conn.execute(
-                "UPDATE products SET role_id = $1 WHERE guild_id = $2 AND product_name = $3",
-                str(role.id), str(self.guild.id), self.product_name
+        try:
+            async with (await get_database_pool()).acquire() as conn:
+                await conn.execute(
+                    "UPDATE products SET role_id = $1 WHERE guild_id = $2 AND product_name = $3",
+                    str(role.id), str(self.guild.id), self.product_name
+                )
+        except asyncpg.PostgresError as e:
+            logger.error(f"[DB Error] Failed to update role for '{self.product_name}' in '{self.guild.name}': {e}")
+            await interaction.edit_original_message(
+                content="❌ Failed to save role update. Please try again.",
+                view=None
             )
+            return
 
         logger.info(f"[Role Updated] '{self.product_name}' in '{self.guild.name}' → role '{role.name}'")
 
@@ -174,27 +183,36 @@ class RenameProductModal(disnake.ui.Modal):
             )
             return
 
-        async with (await get_database_pool()).acquire() as conn:
-            existing = await conn.fetchrow(
-                "SELECT 1 FROM products WHERE guild_id = $1 AND product_name = $2",
-                str(self.guild.id), new_name
-            )
-            if existing:
-                await interaction.response.send_message(
-                    f"❌ A product named **`{new_name}`** already exists.",
-                    ephemeral=True,
-                    delete_after=config.message_timeout
+        try:
+            async with (await get_database_pool()).acquire() as conn:
+                existing = await conn.fetchrow(
+                    "SELECT 1 FROM products WHERE guild_id = $1 AND product_name = $2",
+                    str(self.guild.id), new_name
                 )
-                return
+                if existing:
+                    await interaction.response.send_message(
+                        f"❌ A product named **`{new_name}`** already exists.",
+                        ephemeral=True,
+                        delete_after=config.message_timeout
+                    )
+                    return
 
-            await conn.execute(
-                "UPDATE products SET product_name = $1 WHERE guild_id = $2 AND product_name = $3",
-                new_name, str(self.guild.id), self.current_name
+                await conn.execute(
+                    "UPDATE products SET product_name = $1 WHERE guild_id = $2 AND product_name = $3",
+                    new_name, str(self.guild.id), self.current_name
+                )
+                await conn.execute(
+                    "UPDATE verified_licenses SET product_name = $1 WHERE guild_id = $2 AND product_name = $3",
+                    new_name, str(self.guild.id), self.current_name
+                )
+        except asyncpg.PostgresError as e:
+            logger.error(f"[DB Error] Failed to rename '{self.current_name}' → '{new_name}' in '{self.guild.name}': {e}")
+            await interaction.response.send_message(
+                "❌ Failed to rename product. Please try again.",
+                ephemeral=True,
+                delete_after=config.message_timeout
             )
-            await conn.execute(
-                "UPDATE verified_licenses SET product_name = $1 WHERE guild_id = $2 AND product_name = $3",
-                new_name, str(self.guild.id), self.current_name
-            )
+            return
 
         logger.info(f"[Product Renamed] '{self.current_name}' → '{new_name}' in '{self.guild.name}'")
         await interaction.response.send_message(

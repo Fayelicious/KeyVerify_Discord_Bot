@@ -1,3 +1,4 @@
+import asyncio
 import disnake
 from disnake.ext import commands
 import aiohttp
@@ -5,6 +6,7 @@ import os
 from utils.encryption import decrypt_data
 from utils.database import get_database_pool
 from utils.validation import validate_license_key
+from utils.errors import ValidationError
 import config
 import logging
 
@@ -33,7 +35,7 @@ class ResetKeyModal(disnake.ui.Modal):
 
         try:
             license_key = validate_license_key(license_key)
-        except ValueError as e:
+        except ValidationError as e:
             await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True, delete_after=config.message_timeout)
             return
 
@@ -66,6 +68,12 @@ class ResetKeyModal(disnake.ui.Modal):
                             ephemeral=True, delete_after=config.message_timeout
                         )
 
+        except asyncio.TimeoutError:
+            logger.error(f"[Key Reset Timeout] Request timed out for '{self.product_name}' by {interaction.author}")
+            await interaction.response.send_message(
+                "❌ Request timed out. Please try again later.",
+                ephemeral=True, delete_after=config.message_timeout
+            )
         except aiohttp.ClientError as e:
             logger.error(f"[Key Reset Error] Network error for '{self.product_name}' by {interaction.author}: {e}")
             await interaction.response.send_message(
