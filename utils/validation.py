@@ -12,8 +12,4 @@ def validate_license_key(license_key: str) -> str:
     if not re.match(r"^[A-Z0-9\-]+$", normalized):
         raise ValidationError("License key may only contain letters, numbers, and hyphens.")
 
-    # Auto-insert hyphens if user entered 20 chars without them
-    if re.match(r"^[A-Z0-9]{20}$", normalized):
-        normalized = f"{normalized[0:5]}-{normalized[5:10]}-{normalized[10:15]}-{normalized[15:20]}"
-
     return normalized

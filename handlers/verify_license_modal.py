@@ -68,7 +68,7 @@ class VerifyLicenseModal(disnake.ui.Modal):
                 async with session.get(PAYHIP_VERIFY_URL, headers=headers, timeout=10) as response:
                     if response.status != 200:
                         body = await response.text()
-                        logger.error(f"[Payhip Verify] Non-200 response ({response.status}) for '{self.product_name}': {body}")
+                        logger.error(f"[Payhip Verify] Non-200 response ({response.status}) for '{self.product_name}' in '{interaction.guild.name}': {body}")
                         await reply("❌ Failed to verify license with server.")
                         return
 
