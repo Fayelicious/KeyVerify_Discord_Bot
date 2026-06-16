@@ -68,8 +68,12 @@ class VerifyLicenseModal(disnake.ui.Modal):
                 async with session.get(PAYHIP_VERIFY_URL, headers=headers, timeout=10) as response:
                     if response.status != 200:
                         body = await response.text()
-                        logger.error(f"[Payhip Verify] Non-200 response ({response.status}) for '{self.product_name}' in '{interaction.guild.name}': {body}")
-                        await reply("❌ Failed to verify license with server.")
+                        if response.status == 400:
+                            logger.warning(f"[Invalid Key] {interaction.user} entered an unrecognised key for '{self.product_name}' in '{interaction.guild.name}'.")
+                            await reply("❌ That license key wasn't found. Please double-check your key and try again.")
+                        else:
+                            logger.error(f"[Payhip Verify] Non-200 response ({response.status}) for '{self.product_name}' in '{interaction.guild.name}': {body}")
+                            await reply("❌ Failed to verify license with server. Please try again later.")
                         return
 
                     try:
