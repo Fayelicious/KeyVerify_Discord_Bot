@@ -1,6 +1,7 @@
 import disnake
 from disnake.ext import commands
 from utils.database import get_database_pool, fetch_products
+from utils.permissions import is_authorized
 import config
 import logging
 
@@ -8,15 +9,12 @@ logger = logging.getLogger(__name__)
 
 class RemoveProduct(commands.Cog):
     @commands.slash_command(
-        description="Remove a product from the server's list (server owner only).",
-        default_member_permissions=disnake.Permissions(manage_guild=True),
+        description="Remove a product from the server's list (owner or permitted roles).",
     )
     async def remove_product(self, inter: disnake.ApplicationCommandInteraction):
-        if inter.author.id != inter.guild.owner_id:
-            logger.warning(f"[Blocked] {inter.author} tried to access /remove_product in '{inter.guild.name}'")
-            await inter.response.send_message("❌ Only the server owner can use this command.", ephemeral=True, delete_after=config.message_timeout)
+        if not await is_authorized(inter, "remove_product"):
             return
-        
+
         products = await fetch_products(str(inter.guild.id))
         if not products:
             await inter.response.send_message("❌ No products to remove.", ephemeral=True, delete_after=config.message_timeout)

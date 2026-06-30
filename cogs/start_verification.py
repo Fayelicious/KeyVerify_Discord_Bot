@@ -2,6 +2,7 @@ import disnake
 import logging
 from disnake.ext import commands
 from utils.database import get_database_pool, fetch_products
+from utils.permissions import is_authorized
 from handlers.verification_handler import create_verification_embed, create_verification_view
 import config
 
@@ -12,16 +13,10 @@ class StartVerification(commands.Cog):
         self.bot = bot
 
     @commands.slash_command(
-        description="Start the product verification process (server owner only).",
-        default_member_permissions=disnake.Permissions(manage_guild=True),
+        description="Start the product verification process (owner or permitted roles).",
     )
-    async def start_verification(self, inter: disnake.ApplicationCommandInteraction): 
-        if inter.author.id != inter.guild.owner_id:
-            await inter.response.send_message(
-                "❌ Only the server owner can use this command.",
-                ephemeral=True,
-                delete_after=config.message_timeout
-            )
+    async def start_verification(self, inter: disnake.ApplicationCommandInteraction):
+        if not await is_authorized(inter, "start_verification"):
             return
 
         products = await fetch_products(str(inter.guild.id))

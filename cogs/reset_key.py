@@ -7,6 +7,7 @@ from utils.encryption import decrypt_data
 from utils.database import get_database_pool
 from utils.validation import validate_license_key
 from utils.errors import ValidationError
+from utils.permissions import is_authorized
 import config
 import logging
 
@@ -91,18 +92,14 @@ class ResetKey(commands.Cog):
             raise ValueError("PAYHIP_API_KEY is not defined in environment variables.")
 
     @commands.slash_command(
-        description="Reset a product license key's usage count (server owner only).",
-        default_member_permissions=disnake.Permissions(manage_guild=True),
+        description="Reset a product license key's usage count (owner or permitted roles).",
     )
     async def reset_key(
         self,
         inter: disnake.ApplicationCommandInteraction,
         product_name: str,
     ):
-        if inter.author.id != inter.guild.owner_id:
-            await inter.response.send_message(
-                "❌ Only the server owner can use this command.", ephemeral=True, delete_after=config.message_timeout
-            )
+        if not await is_authorized(inter, "reset_key"):
             return
 
         async with (await get_database_pool()).acquire() as conn:

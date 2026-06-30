@@ -71,6 +71,26 @@ async def initialize_database():
             )
             """)
             await conn.execute("""
+            CREATE TABLE IF NOT EXISTS guild_role_permissions (
+                guild_id   TEXT NOT NULL,
+                role_id    TEXT NOT NULL,
+                permission TEXT NOT NULL,
+                PRIMARY KEY (guild_id, role_id, permission)
+            )
+            """)
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id          SERIAL PRIMARY KEY,
+                guild_id    TEXT NOT NULL,
+                guild_name  TEXT,
+                author_id   TEXT NOT NULL,
+                author_name TEXT,
+                subject     TEXT,
+                message     TEXT NOT NULL,
+                created_at  TIMESTAMPTZ DEFAULT NOW()
+            )
+            """)
+            await conn.execute("""
             ALTER TABLE server_log_channels ADD COLUMN IF NOT EXISTS permission_warned BOOLEAN DEFAULT FALSE
             """)
     except asyncpg.PostgresError as e:
@@ -105,6 +125,65 @@ async def get_database_pool():
     if database_pool is None:
         raise DatabaseError("Database not initialized. Call `initialize_database` first.")
     return database_pool
+
+
+async def get_role_permissions(guild_id, role_id) -> set:
+    # Every capability granted to a single role, used to pre-tick the /permissions menu.
+    try:
+        async with (await get_database_pool()).acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT permission FROM guild_role_permissions WHERE guild_id = $1 AND role_id = $2",
+                str(guild_id), str(role_id)
+            )
+        return {row["permission"] for row in rows}
+    except asyncpg.PostgresError as e:
+        raise DatabaseError(f"Failed to fetch permissions for role {role_id}.") from e
+
+
+async def set_role_permissions(guild_id, role_id, permissions):
+    # Replace the role's entire permission set atomically (the menu submits a full selection).
+    try:
+        async with (await get_database_pool()).acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM guild_role_permissions WHERE guild_id = $1 AND role_id = $2",
+                    str(guild_id), str(role_id)
+                )
+                if permissions:
+                    await conn.executemany(
+                        "INSERT INTO guild_role_permissions (guild_id, role_id, permission) VALUES ($1, $2, $3)",
+                        [(str(guild_id), str(role_id), perm) for perm in permissions]
+                    )
+    except asyncpg.PostgresError as e:
+        raise DatabaseError(f"Failed to set permissions for role {role_id}.") from e
+
+
+async def save_feedback(guild_id, guild_name, author_id, author_name, subject, message):
+    # Persist a feedback/suggestion entry for the developer to review in the admin panel.
+    try:
+        async with (await get_database_pool()).acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO feedback (guild_id, guild_name, author_id, author_name, subject, message)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                """,
+                str(guild_id), guild_name, str(author_id), author_name, subject, message
+            )
+    except asyncpg.PostgresError as e:
+        raise DatabaseError("Failed to save feedback.") from e
+
+
+async def get_role_ids_with_permission(guild_id, permission) -> set:
+    # All role IDs granted a given capability, used to authorize an incoming command.
+    try:
+        async with (await get_database_pool()).acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT role_id FROM guild_role_permissions WHERE guild_id = $1 AND permission = $2",
+                str(guild_id), permission
+            )
+        return {row["role_id"] for row in rows}
+    except asyncpg.PostgresError as e:
+        raise DatabaseError(f"Failed to fetch roles for permission '{permission}'.") from e
 
 
 async def fetch_products(guild_id) -> dict:

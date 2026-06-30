@@ -2,6 +2,7 @@ import asyncpg
 import disnake
 from disnake.ext import commands
 from utils.database import get_database_pool
+from utils.permissions import is_authorized
 import config
 import asyncio
 import logging
@@ -30,17 +31,15 @@ class SetLogChannel(commands.Cog):
             logger.error(f"[DB Error] Failed to create server_log_channels table: {e}")
 
     @commands.slash_command(
-        description="Set a channel to log successful verifications (server owner only).",
-        default_member_permissions=disnake.Permissions(manage_guild=True)
+        description="Set a channel to log successful verifications (owner or permitted roles).",
     )
     async def set_lchannel(
         self,
         inter: disnake.ApplicationCommandInteraction,
         channel: disnake.TextChannel
     ):
-        # This command allows the server owner to set or update the log channel for license verification events.
-        if inter.author.id != inter.guild.owner_id:
-            await inter.response.send_message("❌ Only the server owner can set the log channel.", ephemeral=True,delete_after=config.message_timeout)
+        # This command allows authorized members to set or update the log channel for license verification events.
+        if not await is_authorized(inter, "set_log_channel"):
             return
 
         try:

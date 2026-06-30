@@ -59,7 +59,11 @@ class HelpCommand(commands.Cog):
 
         embed.add_field(
             name="📜 Utility",
-            value="/set_lchannel — Set a channel for verification log messages",
+            value=(
+                "/set_lchannel — Set a channel for verification log messages\n"
+                "/permissions — Choose which commands a role can use (owner only)\n"
+                "/feedback — Send feedback or a suggestion to the developer"
+            ),
             inline=False
         )
 

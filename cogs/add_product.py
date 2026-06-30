@@ -2,6 +2,7 @@ import disnake
 from disnake.ext import commands
 from utils.encryption import encrypt_data
 from utils.database import get_database_pool
+from utils.permissions import is_authorized
 import config
 import logging
 import uuid
@@ -16,17 +17,10 @@ class AddProduct(commands.Cog):
         self.bot = bot
 
     @commands.slash_command(
-        description="Add a product to the server's list with an assigned role (server owner only).",
-        default_member_permissions=disnake.Permissions(manage_guild=True),
+        description="Add a product to the server's list with an assigned role (owner or permitted roles).",
     )
     async def add_product(self, inter: disnake.ApplicationCommandInteraction):
-        if inter.author.id != inter.guild.owner_id:
-            logger.warning(f"[Unauthorized Attempt] {inter.author} tried to add a product in '{inter.guild.name}'")
-            await inter.response.send_message(
-                "❌ Only the server owner can use this command.",
-                ephemeral=True,
-                delete_after=config.message_timeout
-            )
+        if not await is_authorized(inter, "add_product"):
             return
 
         await inter.response.send_modal(AddProductModal())

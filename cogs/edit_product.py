@@ -2,6 +2,7 @@ import asyncpg
 import disnake
 from disnake.ext import commands
 from utils.database import get_database_pool
+from utils.permissions import is_authorized
 import config
 import logging
 
@@ -13,16 +14,10 @@ class EditProduct(commands.Cog):
         self.bot = bot
 
     @commands.slash_command(
-        description="Edit the name or role of an existing product (server owner only).",
-        default_member_permissions=disnake.Permissions(manage_guild=True),
+        description="Edit the name or role of an existing product (owner or permitted roles).",
     )
     async def edit_product(self, inter: disnake.ApplicationCommandInteraction):
-        if inter.author.id != inter.guild.owner_id:
-            await inter.response.send_message(
-                "❌ Only the server owner can use this command.",
-                ephemeral=True,
-                delete_after=config.message_timeout
-            )
+        if not await is_authorized(inter, "edit_product"):
             return
 
         async with (await get_database_pool()).acquire() as conn:
